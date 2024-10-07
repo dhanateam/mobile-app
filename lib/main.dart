@@ -1,131 +1,139 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:telemoni/screens/home.dart';
+import 'package:telemoni/utils/themeprovider.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding
+      .ensureInitialized(); // Ensure widgets are bound before async code
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  final String? token = prefs.getString('token'); // Check if a token exists
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => ThemeProvider(),
+      child: MyApp(
+          initialRoute: token == null
+              ? '/login'
+              : '/home'), // Direct to appropriate screen
+    ),
+  );
 }
 
-class MyApp extends StatefulWidget {
-  const MyApp({super.key});
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  // Track the current theme mode (light or dark)
-  bool isDarkMode = false;
+class MyApp extends StatelessWidget {
+  final String initialRoute;
+  const MyApp({super.key, required this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
-      debugShowCheckedModeBanner: false, // Remove the debug banner
+      debugShowCheckedModeBanner: false,
       title: 'Telemoni',
-      theme: ThemeData(
-        brightness: Brightness.light,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
-      themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      home: MyHomePage(
-        title: 'Telemoni',
-        toggleTheme: _toggleTheme,
-      ),
+      theme: themeProvider.themeData,
+      initialRoute: initialRoute,
+      routes: {
+        '/login': (context) => const LoginPage(),
+        '/home': (context) => const MainPageContent(),
+      },
     );
   }
-
-  void _toggleTheme() {
-    setState(() {
-      isDarkMode = !isDarkMode;
-    });
-  }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title, required this.toggleTheme});
-
-  final String title;
-  final VoidCallback toggleTheme;
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _selectedIndex = 0;
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _otpController = TextEditingController();
+  String? generatedOTP;
+  bool otpVisible = false;
 
-  // List of screens for navigation
-  final List<Widget> _pages = [
-    const Center(child: Text('Home Screen')),
-    const Center(child: Text('Add Product Screen')),
-    const Center(child: Text('My Products Screen')),
-    const Center(child: Text('Profile Screen')),
-  ];
+  // Function to generate a random OTP
+  String _generateRandomOTP() {
+    Random random = Random();
+    return (1000 + random.nextInt(9000)).toString(); // Generate a 4-digit OTP
+  }
 
-  // Function to handle bottom navigation bar tap
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  // Function to handle login and generate OTP
+  void _handleLogin() {
+    String phoneNumber = _phoneController.text;
+
+    if (phoneNumber.isNotEmpty) {
+      setState(() {
+        generatedOTP = _generateRandomOTP();
+        otpVisible = true; // Show OTP input
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid phone number')),
+      );
+    }
+  }
+
+  // Function to handle OTP verification and saving the token (phone number)
+  Future<void> _verifyOTP() async {
+    if (_otpController.text == generatedOTP) {
+      // If OTP matches, save the phone number as a token
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+          'token', _phoneController.text); // Save the phone number as a token
+
+      // Navigate to the home page
+      Navigator.pushReplacementNamed(context,'/home' );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid OTP')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final iconColor = isDarkMode ? Colors.white : Colors.black;
-    final labelColor = isDarkMode ? Colors.white : Colors.black;
-
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.brightness_6),
-            onPressed: widget.toggleTheme,
-            tooltip: 'Toggle Theme',
-          ),
-        ],
-      ),
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home, color: iconColor),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add, color: iconColor),
-            label: 'Add Product',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.inventory, color: iconColor),
-            label: 'My Products',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person, color: iconColor),
-            label: 'Profile',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.deepPurple,
-        onTap: _onItemTapped,
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        unselectedItemColor:
-            iconColor, // Ensure unselected icon color matches the theme
-        selectedLabelStyle: TextStyle(color: labelColor),
-        unselectedLabelStyle: TextStyle(color: labelColor),
+      appBar: AppBar(title: const Text('Login')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration:
+                  const InputDecoration(labelText: 'Enter phone number'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _handleLogin,
+              child: const Text('Generate OTP'),
+            ),
+            if (otpVisible) ...[
+              const SizedBox(height: 20),
+              Text('OTP: $generatedOTP',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              TextField(
+                controller: _otpController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Enter OTP'),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _verifyOTP,
+                child: const Text('Verify OTP and Login'),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 }
+
