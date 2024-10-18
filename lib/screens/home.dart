@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:telemoni/screens/addproduct.dart';
+import 'package:telemoni/screens/getverified.dart';
+import 'package:telemoni/screens/products.dart';
 import 'package:telemoni/screens/profile.dart';
-import 'package:telemoni/utils/addproduct.dart';
 import 'package:telemoni/utils/themeprovider.dart';
 
 class MainPageContent extends StatefulWidget {
@@ -19,9 +21,9 @@ class _MainPageContentState extends State<MainPageContent> {
 
   // List of screens for navigation
   final List<Widget> _pages = [
-    const Center(child: Text('Home Screen')),
+    const VerificationScreen(),
     const AddProductPage(),
-    const Center(child: Text('Add Product Screen')),
+     const ProductsPage(),
     const ProfilePage(),  ];
 
   // Function to handle bottom navigation bar tap
@@ -71,7 +73,7 @@ class _MainPageContentState extends State<MainPageContent> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Color.fromARGB(255, 111, 63, 193),
+        selectedItemColor: const Color.fromARGB(255, 111, 63, 193),
         onTap: _onItemTapped,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         unselectedItemColor:

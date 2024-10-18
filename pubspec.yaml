@@ -11,7 +11,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  image_picker: ^0.8.7+5
+  permission_handler: ^10.2.0
   cupertino_icons: ^1.0.6
   http: ^0.13.4
   shared_preferences: ^2.0.13
@@ -21,6 +22,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  share_plus: ^6.3.1
 
 flutter:
   uses-material-design: true
@@ -29,4 +31,4 @@ flutter:
     - assets/telegram.png
     - assets/zoom.png
     - assets/lock.png
-  
+    - assets/404.jpg

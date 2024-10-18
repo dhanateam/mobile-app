@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:telemoni/screens/banking.dart';
+import 'package:telemoni/screens/wallet.dart';
 import 'package:telemoni/utils/themeprovider.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -14,7 +16,7 @@ class ProfilePage extends StatelessWidget {
 
     // Scaling factors
     double paddingScale = screenWidth * 0.04;
-    double avatarRadius = screenWidth * 0.1;
+    double avatarRadius = screenWidth * 0.08;
     double fontSize = screenWidth * 0.045;
     double cardElevation = screenWidth * 0.01;
 
@@ -82,10 +84,14 @@ class ProfilePage extends StatelessWidget {
                         ),
                       ),
                       onTap: () {
-                        // Handle Wallet tap
-                      },
+Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const WithdrawalPage(),
+                          ),
+                        );                      },
                     ),
-                    Divider(),
+                    const Divider(),
                     ListTile(
                       leading: Icon(
                         Icons.attach_money,
@@ -103,6 +109,31 @@ class ProfilePage extends StatelessWidget {
                         // Handle Earnings tap
                       },
                     ),
+                    const Divider(),
+                    ListTile(
+                      leading: Icon(
+                        Icons.account_balance, // Bank icon
+                        color: customColors.iconColor,
+                        size: screenWidth * 0.07,
+                      ),
+                      title: Text(
+                        'Bank Accounts',
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          color: customColors.textColor,
+                        ),
+                      ),
+                      onTap: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const Banking(),
+                          ),
+                        );
+                      },
+                    ),
+
                   ],
                 ),
               ),
@@ -140,7 +171,7 @@ class ProfilePage extends StatelessWidget {
                         // Navigate to Dashboard
                       },
                     ),
-                    Divider(),
+                    const Divider(),
                     ListTile(
                       leading: Icon(
                         Icons.settings,
@@ -158,7 +189,7 @@ class ProfilePage extends StatelessWidget {
                         // Navigate to Settings
                       },
                     ),
-                    Divider(),
+                    const Divider(),
                     ListTile(
                       leading: Icon(
                         Icons.logout,

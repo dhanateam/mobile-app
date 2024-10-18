@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:telemoni/screens/createchannel.dart';
 
 class AddProductPage extends StatelessWidget {
-  const AddProductPage({Key? key}) : super(key: key);
+  const AddProductPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +15,12 @@ class AddProductPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Product to get started'),
+        title: Text(
+          'Add Product to get started',
+          style: TextStyle(
+            fontSize: 16 * MediaQuery.of(context).textScaleFactor,
+          ),
+        ),
       ),
       body: Center(
         child: Column(
@@ -27,10 +33,7 @@ class AddProductPage extends StatelessWidget {
               'Launch a Telegram Channel',
               Colors.blueAccent.shade100, // Telegram-themed background color
               'assets/telegram.png', // Update with your asset path
-              () {
-                // Action to perform on tap for Telegram card
-                print('Telegram Channel card clicked');
-              },
+              () => _showTelegramOptions(context),
             ),
             SizedBox(height: screenHeight * 0.02), // Space between cards
             buildCard(
@@ -42,7 +45,6 @@ class AddProductPage extends StatelessWidget {
               'assets/zoom.png', // Update with your asset path
               () {
                 // Action to perform on tap for Zoom card
-                print('Zoom Webinar card clicked');
               },
             ),
             SizedBox(height: screenHeight * 0.02), // Space between cards
@@ -56,7 +58,6 @@ class AddProductPage extends StatelessWidget {
               'assets/lock.png', // Update with your asset path
               () {
                 // Action to perform on tap for Locked Messages card
-                print('Locked Messages card clicked');
               },
             ),
           ],
@@ -114,4 +115,39 @@ class AddProductPage extends StatelessWidget {
       ),
     );
   }
+}
+void _showTelegramOptions(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('Select the Type'),
+        content: const Text('Please choose an option:'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const CreateChannelPage(type: 'Channel'),
+                ),
+              );
+            },
+            child: const Text('Telegram Channel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const CreateChannelPage(type: 'Group'),
+                ),
+              );
+            },
+            child: const Text('Telegram Group'),
+          ),
+        ],
+      );
+    },
+  );
 }
