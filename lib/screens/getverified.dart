@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:telemoni/utils/themeprovider.dart';
+import 'package:flutter/services.dart'; // Import to use TextInputFormatter
 
 class VerificationScreen extends StatefulWidget {
   const VerificationScreen({super.key});
@@ -54,29 +55,19 @@ class _VerificationScreenState extends State<VerificationScreen> {
     }
   }
 
-  void _onPanChanged(String value) {
-    String newValue = value.toUpperCase();
-
-    // Build a new text based on character/number restrictions
-    if (newValue.length <= 10) {
-      StringBuffer buffer = StringBuffer();
-      for (int i = 0; i < newValue.length; i++) {
-        if ((i < 5 || i == 9) && RegExp(r'[A-Z]').hasMatch(newValue[i])) {
-          // Letters allowed in positions 1-5 and 10
-          buffer.write(newValue[i]);
-        } else if ((i >= 5 && i < 9) &&
-            RegExp(r'[0-9]').hasMatch(newValue[i])) {
-          // Numbers allowed in positions 6-9
-          buffer.write(newValue[i]);
-        }
-      }
-      _panController.value = TextEditingValue(
-        text: buffer.toString(),
-        selection: TextSelection.fromPosition(
-          TextPosition(offset: buffer.length),
-        ),
-      );
+  List<TextInputFormatter> _getPanInputFormatters(String text) {
+    if (text.length >= 5 && text.length <= 8) {
+      // Return a numeric-only input formatter for digits 6–9
+      return [
+        FilteringTextInputFormatter.digitsOnly,
+        LengthLimitingTextInputFormatter(10),
+      ];
     }
+    // Return input formatter for A-Z letters for positions 1–5 and 10
+    return [
+      FilteringTextInputFormatter.allow(RegExp(r'[A-Z]')),
+      LengthLimitingTextInputFormatter(10),
+    ];
   }
 
   @override
@@ -87,104 +78,105 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
     return Scaffold(
       backgroundColor: themeProvider.themeData.colorScheme.background,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Show different titles based on form state
-              Text(
-                _isFormVisible
-                    ? 'Complete the form to get verified'
-                    : 'You are not verified',
-                style: TextStyle(
-                  color: customColors.textColor,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              _isFormVisible
+                  ? 'Complete the form to get verified'
+                  : 'You are not verified',
+              style: TextStyle(
+                color: customColors.textColor,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(height: 20),
-              if (_isFormVisible) ...[
-                TextField(
-                  controller: _panController,
-                  onChanged: _onPanChanged,
-                  // Ensure a digit input keyboard is shown when entering positions 6-9
-                  keyboardType: _panController.text.length >= 6 &&
-                          _panController.text.length <= 9
-                      ? TextInputType.number
-                      : TextInputType.text,
-                  decoration: InputDecoration(
-                    labelText: 'Enter your PAN',
-                    errorText: _isPanValid ? null : 'Invalid PAN format',
-                    labelStyle: TextStyle(color: customColors.textColor),
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: customColors.textColor),
-                    ),
-                  ),
-                  style: TextStyle(color: customColors.textColor),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _pickImage,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: customColors.buttonColor,
-                  ),
-                  child: Text(
-                    'Choose Image',
-                    style: TextStyle(color: customColors.textColor),
-                  ),
-                ),
-                if (_selectedImage != null)
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Image.file(_selectedImage!, height: 100, width: 100),
-                  ),
-              ] else ...[
-                Container(
-                  width: mediaQuery.size.width * 0.9,
-                  height: mediaQuery.size.height * 0.3,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    image: const DecorationImage(
-                      image: AssetImage('assets/404.jpg'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: () {
-                  if (_isFormVisible) {
-                    _validateAndSubmit();
-                  } else {
-                    setState(() {
-                      _isFormVisible = true;
-                    });
-                  }
+            ),
+            const SizedBox(height: 40),
+            if (_isFormVisible) ...[
+              TextField(
+                controller: _panController,
+                onChanged: (value) {
+                  setState(() {
+                    // Update the input formatters based on input length
+                    _panController.text = value.toUpperCase();
+                    _panController.selection = TextSelection.fromPosition(
+                      TextPosition(offset: _panController.text.length),
+                    );
+                  });
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isFormVisible
-                      ? themeProvider.isDarkMode
-                          ? Colors.green[900]
-                          : Colors.greenAccent
-                      : themeProvider.isDarkMode
-                          ? Colors.red[900]
-                          : Colors.redAccent,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: mediaQuery.size.width * 0.2,
-                    vertical: mediaQuery.size.height * 0.02,
+                inputFormatters: _getPanInputFormatters(_panController.text),
+                decoration: InputDecoration(
+                  labelText: 'Enter your PAN',
+                  errorText: _isPanValid ? null : 'Invalid PAN format',
+                  labelStyle: TextStyle(color: customColors.textColor),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: customColors.textColor),
                   ),
+                ),
+                style: TextStyle(color: customColors.textColor),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _pickImage,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: customColors.buttonColor,
                 ),
                 child: Text(
-                  _isFormVisible ? 'Submit' : 'Get Verified',
+                  'Choose Image',
                   style: TextStyle(color: customColors.textColor),
+                ),
+              ),
+              if (_selectedImage != null)
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Image.file(_selectedImage!, height: 100, width: 100),
+                ),
+            ] else ...[
+              Container(
+                width: mediaQuery.size.width * 0.922,
+                height: mediaQuery.size.height * 0.35,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  image: const DecorationImage(
+                    image: AssetImage('assets/404.jpg'),
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ],
-          ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: () {
+                if (_isFormVisible) {
+                  _validateAndSubmit();
+                } else {
+                  setState(() {
+                    _isFormVisible = true;
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isFormVisible
+                    ? themeProvider.isDarkMode
+                        ? Colors.green[900]
+                        : Colors.greenAccent
+                    : themeProvider.isDarkMode
+                        ? Colors.red[900]
+                        : Colors.redAccent,
+                padding: EdgeInsets.symmetric(
+                  horizontal: mediaQuery.size.width * 0.2,
+                  vertical: mediaQuery.size.height * 0.02,
+                ),
+              ),
+              child: Text(
+                _isFormVisible ? 'Submit' : 'Get Verified',
+                style: TextStyle(color: customColors.textColor),
+              ),
+            ),
+          ],
         ),
       ),
     );
