@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:telemoni/main.dart';
 import 'package:telemoni/screens/banking.dart';
 import 'package:telemoni/screens/wallet.dart';
+import 'package:telemoni/utils/localstorage.dart';
 import 'package:telemoni/utils/themeprovider.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -203,8 +206,15 @@ Navigator.push(
                           color: customColors.textColor,
                         ),
                       ),
-                      onTap: () {
-                        // Handle Logout functionality
+                      onTap: () async {
+                        LocalStorage.removeLogin();
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const LoginPage(),
+                          ),
+                        );
                       },
                     ),
                   ],

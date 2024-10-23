@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:provider/provider.dart';
+import 'package:telemoni/utils/api_service.dart';
 import 'package:telemoni/utils/themeprovider.dart';
 
 class VerificationScreen extends StatefulWidget {
@@ -16,12 +17,17 @@ class VerificationScreen extends StatefulWidget {
 
 class _VerificationScreenState extends State<VerificationScreen> {
   final _panController = TextEditingController();
+  TextEditingController _nameController =
+      TextEditingController(); // Controller for name input
   final _focusNode = FocusNode();
   File? _selectedImage;
+  String? _base64Image;
   bool _isFormVisible = false;
   bool _isPanValid = true;
   String _verificationStatus = '';
-bool _isImageRequired = false;
+  bool _isImageRequired = false;
+  String? _imageError;
+  final ApiService apiService = ApiService();
 
   // PAN format regex: 5 uppercase letters, 4 digits, and 1 uppercase letter
   final _panFormat = RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]$');
@@ -47,35 +53,81 @@ bool _isImageRequired = false;
     });
   }
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+Future<void> _pickImage() async {
+  final picker = ImagePicker();
+  final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
-    if (pickedFile != null) {
+  if (pickedFile != null) {
+    final file = File(pickedFile.path);
+    final fileSize = await file.length(); // Get the file size in bytes
+
+    // Check if the file size is less than or equal to 1 MB (1 * 1024 * 1024 bytes)
+    if (fileSize <= 1 * 1024 * 1024) {
+      final bytes = await file.readAsBytes(); // Read file as bytes
+      final base64Image = base64Encode(bytes); // Convert to Base64
+
       setState(() {
-        _selectedImage = File(pickedFile.path);
+        _selectedImage = file; // Set the selected image (if needed for preview)
+        _base64Image = base64Image; // Store the Base64 string
+        _imageError = null; // Reset any previous error
+      });
+    } else {
+      // Show an error message in a Snackbar if the file size is greater than 1 MB
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+              'The image size should be 1 MB or less. Please select another image.'),
+          duration: const Duration(seconds: 3), // Duration for the Snackbar
+          backgroundColor: Colors.red, // Optional: Customize background color
+        ),
+      );
+      // Optionally reset the selected image to null if you want to enforce re-upload
+      setState(() {
+        _selectedImage = null; // Reset the selected image
+        _base64Image = null; // Reset the Base64 string
       });
     }
   }
+}
 
-  void _validateAndSubmit() {
-    String enteredPan = _panController.text.toUpperCase();
-    bool isPanValid = _panFormat.hasMatch(enteredPan);
 
-    setState(() {
-      _isPanValid = isPanValid;
-    });
+void _validateAndSubmit() async {
+  String enteredPan = _panController.text.toUpperCase();
+  bool isPanValid = _panFormat.hasMatch(enteredPan);
 
-    if (isPanValid && _selectedImage != null) {
-      final panData = {
-        'pan': enteredPan,
-        'image': base64Encode(_selectedImage!.readAsBytesSync()),
-      };
-      print('Form Submitted: $panData');
+  setState(() {
+    _isPanValid = isPanValid;
+  });
+
+  if (isPanValid && _selectedImage != null && _base64Image != null) {
+    final panData = {
+      'name': _nameController.text,
+      'pan': enteredPan,
+      'image': _base64Image, // Use the Base64 image string
+    };
+
+    print('Name: ${_nameController.text}, PAN: ${_panController.text}, Image (Base64): ${_base64Image}');
+
+    try {
+      await apiService.submitDetails(panData);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Form Submitted Successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error submitting details: $e')),
+      );
     }
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Please enter a valid PAN and upload an image.')),
+    );
   }
+}
 
-  // Method to handle input changes and dynamically switch keyboards
+
+  int _previousLength = 0; // Track the previous input length
+
   void _onPanChanged(String value) {
     String newValue = value.toUpperCase();
 
@@ -84,22 +136,41 @@ bool _isImageRequired = false;
       newValue = newValue.substring(0, 10);
     }
 
-    // Check the length to handle keyboard switching logic
-    if (newValue.length == 5) {
-      // Close the alphabetical keyboard and open the numerical keyboard
+    // Determine the new input length
+    int newLength = newValue.length;
+
+    // Check for keyboard type changes based on length
+    if (_previousLength == 4 && newLength == 5) {
+      // From 4 to 5, switch to number keyboard
       _focusNode.unfocus();
       Future.delayed(Duration(milliseconds: 100), () {
         FocusScope.of(context).requestFocus(_focusNode);
         SystemChannels.textInput
             .invokeMethod('TextInput.setClient', [null, TextInputType.number]);
       });
-    } else if (newValue.length == 9) {
-      // Close the numerical keyboard and open the alphabetical keyboard
+    } else if (_previousLength == 5 && newLength == 4) {
+      // From 5 to 4, switch to text keyboard
       _focusNode.unfocus();
       Future.delayed(Duration(milliseconds: 100), () {
         FocusScope.of(context).requestFocus(_focusNode);
         SystemChannels.textInput
             .invokeMethod('TextInput.setClient', [null, TextInputType.text]);
+      });
+    } else if (_previousLength == 8 && newLength == 9) {
+      // From 8 to 9, switch to text keyboard
+      _focusNode.unfocus();
+      Future.delayed(Duration(milliseconds: 100), () {
+        FocusScope.of(context).requestFocus(_focusNode);
+        SystemChannels.textInput
+            .invokeMethod('TextInput.setClient', [null, TextInputType.text]);
+      });
+    } else if (_previousLength == 9 && newLength == 8) {
+      // From 9 to 10, switch to number keyboard
+      _focusNode.unfocus();
+      Future.delayed(Duration(milliseconds: 100), () {
+        FocusScope.of(context).requestFocus(_focusNode);
+        SystemChannels.textInput
+            .invokeMethod('TextInput.setClient', [null, TextInputType.number]);
       });
     }
 
@@ -110,6 +181,9 @@ bool _isImageRequired = false;
         TextPosition(offset: newValue.length),
       ),
     );
+
+    // Update the previous length
+    _previousLength = newLength;
 
     setState(() {
       _isPanValid = true; // Reset validation state when input changes
@@ -163,23 +237,24 @@ bool _isImageRequired = false;
                 Column(
                   children: [
                     Text(
-!_isFormVisible
+                      !_isFormVisible
                           ? 'You are not verified'
-                          : 'Complete the form to get verified',                      style: TextStyle(
+                          : 'Complete the form to get verified',
+                      style: TextStyle(
                         color: customColors.textColor,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 20),
-                        if (!_isFormVisible)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16.0),
-                      child: Image.asset(
-                        'assets/404.jpg',
-                        width: MediaQuery.of(context).size.width*.9,
+                    if (!_isFormVisible)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16.0),
+                        child: Image.asset(
+                          'assets/404.jpg',
+                          width: MediaQuery.of(context).size.width * .9,
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 30),
                     if (_isFormVisible)
                       Card(
@@ -191,7 +266,24 @@ bool _isImageRequired = false;
                           padding: const EdgeInsets.all(16.0),
                           child: Column(
                             children: [
+                              // Name input field
+                              TextField(
+                                controller:
+                                    _nameController, // Add a controller for the name input
+                                decoration: InputDecoration(
+                                  labelText: 'Enter Name as per PAN',
+                                  labelStyle:
+                                      TextStyle(color: customColors.textColor),
+                                  focusedBorder: UnderlineInputBorder(
+                                    borderSide: BorderSide(
+                                        color: customColors.textColor),
+                                  ),
+                                ),
+                                style: TextStyle(color: customColors.textColor),
+                              ),
+                              const SizedBox(height: 16),
 
+                              // PAN input field
                               TextField(
                                 controller: _panController,
                                 focusNode: _focusNode,
@@ -208,8 +300,7 @@ bool _isImageRequired = false;
                                 maxLength: 10,
                                 decoration: InputDecoration(
                                   labelText: 'Enter your PAN',
-                                  errorText:
-                                      _isPanValid ? null : 'Invalid PAN ',
+                                  errorText: _isPanValid ? null : 'Invalid PAN',
                                   labelStyle:
                                       TextStyle(color: customColors.textColor),
                                   focusedBorder: UnderlineInputBorder(
@@ -220,7 +311,7 @@ bool _isImageRequired = false;
                                 style: TextStyle(color: customColors.textColor),
                               ),
                               const SizedBox(height: 16),
-                             Column(
+                              Column(
                                 children: [
                                   if (_selectedImage != null)
                                     Padding(
@@ -243,12 +334,12 @@ bool _isImageRequired = false;
                                     ),
                                   ),
                                   if (_isImageRequired &&
-                                      _selectedImage ==
-                                          null) // Show the error only when the submit button is clicked and image is not selected
+                                      _selectedImage == null)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 8.0),
                                       child: Text(
-                                        'We need your PAN to verify your details',
+                                        _imageError ??
+                                            'We need your PAN to verify your details', // Show the error if present
                                         style: TextStyle(
                                           color: Colors.red,
                                           fontSize: 14,
@@ -262,7 +353,9 @@ bool _isImageRequired = false;
                           ),
                         ),
                       ),
-                    const SizedBox(height: 20,),
+                    const SizedBox(
+                      height: 20,
+                    ),
                     ElevatedButton(
                       onPressed: () {
                         if (_isFormVisible) {
@@ -297,7 +390,7 @@ bool _isImageRequired = false;
                     ),
                   ],
                 ),
-              ],
+            ],
           ),
         ),
       ),

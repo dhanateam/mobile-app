@@ -3,19 +3,27 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:telemoni/screens/home.dart';
+import 'package:telemoni/utils/api_service.dart';
+import 'package:telemoni/utils/localstorage.dart';
+import 'package:telemoni/utils/secure_storage_service.dart';
 import 'package:telemoni/utils/themeprovider.dart';
 
 void main() async {
   WidgetsFlutterBinding
       .ensureInitialized(); // Ensure widgets are bound before async code
   final SharedPreferences prefs = await SharedPreferences.getInstance();
-  final String? token = prefs.getString('token'); // Check if a token exists
+  bool token = false;
+  if (LocalStorage.getLogin() == 'y') {
+    token = true;
+  }
+
+  print(token);
 
   runApp(
     ChangeNotifierProvider(
       create: (context) => ThemeProvider(),
       child: MyApp(
-          initialRoute: token == null
+          initialRoute: token == false
               ? '/login'
               : '/home'), // Direct to appropriate screen
     ),
@@ -55,6 +63,8 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _otpController = TextEditingController();
   String? generatedOTP;
   bool otpVisible = false;
+  final ApiService apiService = ApiService();
+  final SecureStorageService secureStorageService = SecureStorageService();
 
   // Function to generate a random OTP
   String _generateRandomOTP() {
@@ -62,15 +72,27 @@ class _LoginPageState extends State<LoginPage> {
     return (1000 + random.nextInt(9000)).toString(); // Generate a 4-digit OTP
   }
 
-  // Function to handle login and generate OTP
-  void _handleLogin() {
+  void _handleLogin() async {
     String phoneNumber = _phoneController.text;
 
     if (phoneNumber.isNotEmpty) {
-      setState(() {
-        generatedOTP = _generateRandomOTP();
-        otpVisible = true; // Show OTP input
-      });
+      try {
+        // Call the API and get the generated OTP
+        generatedOTP = await apiService.generateOTP(phoneNumber);
+
+        setState(() {
+          otpVisible = true; // Show OTP input field
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('OTP sent to your phone')),
+        );
+      } catch (e) {
+        // Handle errors (e.g., show a SnackBar)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid phone number')),
@@ -80,17 +102,37 @@ class _LoginPageState extends State<LoginPage> {
 
   // Function to handle OTP verification and saving the token (phone number)
   Future<void> _verifyOTP() async {
-    if (_otpController.text == generatedOTP) {
-      // If OTP matches, save the phone number as a token
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-          'token', _phoneController.text); // Save the phone number as a token
+    String enteredOTP = _otpController.text;
+    String phoneNumber = _phoneController.text;
 
-      // Navigate to the home page
-      Navigator.pushReplacementNamed(context,'/home' );
+    if (enteredOTP.isNotEmpty && phoneNumber.isNotEmpty) {
+      try {
+        // Call the API to verify the OTP
+        String? token = await apiService.verifyOTP(phoneNumber, enteredOTP);
+
+        if (token != null) {
+          // If the token is returned, store it in secure storage
+          await secureStorageService.storeToken(token);
+          LocalStorage.setLogin('y');
+          print(token);
+
+          // Navigate to the home page only if the token is successfully stored
+          Navigator.pushReplacementNamed(context, '/home');
+        } else {
+          // If the token is not returned, show an error
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to verify OTP')),
+          );
+        }
+      } catch (e) {
+        // Handle API error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid OTP')),
+        const SnackBar(content: Text('Please enter the OTP')),
       );
     }
   }
@@ -117,8 +159,10 @@ class _LoginPageState extends State<LoginPage> {
             ),
             if (otpVisible) ...[
               const SizedBox(height: 20),
-              Text('OTP: $generatedOTP',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'OTP: $generatedOTP', // Display the received OTP
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               TextField(
                 controller: _otpController,
                 keyboardType: TextInputType.number,
@@ -126,7 +170,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _verifyOTP,
+                onPressed: _verifyOTP, // You will define _verifyOTP later
                 child: const Text('Verify OTP and Login'),
               ),
             ],
@@ -136,4 +180,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-

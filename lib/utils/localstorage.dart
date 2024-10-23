@@ -9,17 +9,17 @@ class LocalStorage {
   }
 
   // Save token (phone number) to shared preferences
-  static Future<void> setToken(String token) async {
+  static Future<void> setLogin(String token) async {
     await _preferences?.setString('token', token);
   }
 
   // Get the stored token (returns null if not found)
-  static String? getToken() {
+  static String? getLogin() {
     return _preferences?.getString('token');
   }
 
   // Remove the token from shared preferences (for logout)
-  static Future<void> removeToken() async {
+  static Future<void> removeLogin() async {
     await _preferences?.remove('token');
   }
 }
