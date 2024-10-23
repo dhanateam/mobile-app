@@ -88,9 +88,19 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
                 GestureDetector(
                   onTap: _getPhoto,
                   child: CircleAvatar(
+                    radius: 30, // Adjust size as needed
                     backgroundColor: customColors.customGrey,
-                    child:
-                        Icon(Icons.camera_alt, color: customColors.iconColor),
+                    child: _base64Image == null
+                        ? Icon(Icons.camera_alt, color: customColors.iconColor)
+                        : ClipOval(
+                            child: Image.memory(
+                              base64Decode(
+                                  _base64Image!), // Decode the image and display it
+                              fit: BoxFit.cover,
+                              width: 60,
+                              height: 60,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 16),
