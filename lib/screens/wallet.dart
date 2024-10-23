@@ -300,7 +300,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
               child: Text(
                 'Raise Withdrawal',
                 style: TextStyle(
-                  color: isdark ? Colors.green[900]! : Colors.greenAccent,
+                  color: customColors.textColor,
                   fontSize: screenHeight * 0.02,
                 ),
               ),
