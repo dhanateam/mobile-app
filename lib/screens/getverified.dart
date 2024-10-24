@@ -109,7 +109,7 @@ void _validateAndSubmit() async {
     print('Name: ${_nameController.text}, PAN: ${_panController.text}, Image (Base64): ${_base64Image}');
 
     try {
-      await apiService.submitDetails(panData);
+      await apiService.submitPanDetails(panData);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Form Submitted Successfully!')),
       );

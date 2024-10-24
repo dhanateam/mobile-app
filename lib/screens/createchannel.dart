@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:telemoni/utils/api_client.dart';
+import 'package:telemoni/utils/api_service.dart';
 import 'package:telemoni/utils/themeprovider.dart';
 
 class CreateChannelPage extends StatefulWidget {
@@ -20,7 +23,7 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
   String _validity = 'One Day';
   String _ppu = '';
   String? _base64Image; // Store the base64 string of the selected image
-
+  ApiService apiService = ApiService();
   @override
   Widget build(BuildContext context) {
     final customColors = Provider.of<ThemeProvider>(context).customColors;
@@ -224,12 +227,17 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
     );
   }
 Future<void> _getPhoto() async {
-    try {
-      // Directly open the gallery to pick an image
-      final pickedFile =
-          await ImagePicker().pickImage(source: ImageSource.gallery);
-      if (pickedFile != null) {
-        final bytes = await pickedFile.readAsBytes();
+  try {
+    // Open the gallery to pick an image
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      final file = File(pickedFile.path);
+      final fileSize = await file.length(); // Get file size in bytes
+
+      // Check if the file size is less than or equal to 1 MB (1 * 1024 * 1024 bytes)
+      if (fileSize <= 1 * 1024 * 1024) {
+        final bytes = await file.readAsBytes(); // Read file bytes
         setState(() {
           _base64Image = base64Encode(bytes); // Convert image to base64
         });
@@ -237,40 +245,61 @@ Future<void> _getPhoto() async {
           const SnackBar(content: Text('Photo selected successfully!')),
         );
       } else {
+        // Show an error message if the image size is greater than 1 MB
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No image was selected.')),
+          const SnackBar(
+            content: Text('The image size must be 1 MB or less. Please select a smaller image.'),
+          ),
         );
       }
-    } catch (e) {
-      // Handle any errors that may occur
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('An error occurred while picking the image.')),
+        const SnackBar(content: Text('No image was selected.')),
       );
     }
+  } catch (e) {
+    // Handle any errors that may occur
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('An error occurred while picking the image.')),
+    );
+  }
+}
+
+
+  void _createRequest() async {
+  // Check for mandatory fields
+  if (_ppu.isEmpty ||
+      _nameController.text.isEmpty ||
+      _descriptionController.text.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('All fields except the image are mandatory.')),
+    );
+    return;
   }
 
-  void _createRequest() {
-    if (_ppu.isEmpty ||
-        _nameController.text.isEmpty ||
-        _descriptionController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('All fields except the image are mandatory.')),
-      );
-      return;
-    }
+  // Construct the product creation request
+  final request = {
+    'ppu': _ppu,
+    'channelName': _nameController.text,
+    'displayText': _descriptionController.text,
+    'image': _base64Image, // Ensure _base64Image contains the image in base64
+    'type': 'telegram',
+    'ctype': widget.type == 'Channel',
+    'validity': _validity.toLowerCase(),
+  };
 
-    final request = {
-      'ppu': _ppu,
-      'channelName': _nameController.text,
-      'displayText': _descriptionController.text,
-      'image': _base64Image, // Add the base64 image to the request
-      'type': 'Telegram',
-      'ctype': widget.type == 'Channel',
-      'validity': _validity.toLowerCase().replaceFirst('one ', ''),
-    };
-
-    // Dummy API call
-    print('Request Data: $request');
-    // Here you could make an actual API call with the request object.
+  try {
+    // Call the API to create the product
+    await apiService.createProduct(request);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Product created successfully!')),
+    );
+  } catch (e) {
+    // Handle any errors
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error creating product: $e')),
+    );
   }
+}
+
 }
