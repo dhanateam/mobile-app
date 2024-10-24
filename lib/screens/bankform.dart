@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telemoni/models/bank.dart';
+import 'package:telemoni/utils/api_service.dart';
 import 'package:telemoni/utils/themeprovider.dart';
 
 class BankFormPage extends StatefulWidget {
@@ -21,7 +22,7 @@ class _BankFormPageState extends State<BankFormPage> {
   String errorMessage = '';
   bool showFieldError = false;
   bool _isAccountNumberVisible = false; // State variable for visibility
-
+  final ApiService apiService = ApiService();
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -44,6 +45,7 @@ class _BankFormPageState extends State<BankFormPage> {
                 _buildTextField(
                   'Bank',
                   'Enter bank name',
+                  false,
                   (value) => bankName = value,
                   mediaQuery,
                   isFieldEmpty: bankName == null || bankName!.isEmpty,
@@ -52,8 +54,9 @@ class _BankFormPageState extends State<BankFormPage> {
                   height: divheight,
                 ),
                 _buildTextField(
-                  'Banking Name',
-                  'Enter banking name',
+                  'Account Holder Name',
+                  'Name of the Account',
+                  false,
                   (value) => bankingName = value,
                   mediaQuery,
                   isFieldEmpty: bankingName == null || bankingName!.isEmpty,
@@ -64,6 +67,7 @@ class _BankFormPageState extends State<BankFormPage> {
                 _buildTextField(
                   'Account Number',
                   'Enter account number',
+                  true,
                   (value) => accountNumber = value,
                   mediaQuery,
                   obscureText:
@@ -83,6 +87,7 @@ class _BankFormPageState extends State<BankFormPage> {
                 _buildTextField(
                   'Re-enter Account Number',
                   'Re-enter account number',
+                  true,
                   (value) => reenteredAccountNumber = value,
                   mediaQuery,
                  // Use the visibility state
@@ -98,6 +103,7 @@ class _BankFormPageState extends State<BankFormPage> {
                 _buildTextField(
                   'IFSC Code',
                   'Enter IFSC code',
+                  false,
                   (value) => ifsc = value,
                   mediaQuery,
                   isFieldEmpty: ifsc == null || ifsc!.isEmpty,
@@ -138,54 +144,56 @@ class _BankFormPageState extends State<BankFormPage> {
     );
   }
 
-  Widget _buildTextField(
-    String label,
-    String hint,
-    Function(String) onChanged,
-    MediaQueryData mediaQuery, {
-    bool obscureText = false,
-    bool isFieldEmpty = false,
-    bool isPasswordField = false,
-    VoidCallback? toggleVisibility,
-  }) {
-    return TextFormField(
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        labelStyle: TextStyle(
-          color: showFieldError && isFieldEmpty ? Colors.red : null,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(
-            color: showFieldError && isFieldEmpty ? Colors.red : Colors.grey,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(
-            color: showFieldError && isFieldEmpty ? Colors.red : Colors.blue,
-          ),
-        ),
-        suffixIcon: isPasswordField
-            ? IconButton(
-                icon: Icon(
-                  obscureText ? Icons.visibility : Icons.visibility_off,
-                ),
-                onPressed: toggleVisibility,
-              )
-            : null, // Show the eye icon only for password fields
+Widget _buildTextField(
+  String label,
+  String hint,
+  bool? keyboard,
+  Function(String) onChanged,
+  MediaQueryData mediaQuery, {
+  bool obscureText = false,
+  bool isFieldEmpty = false,
+  bool isPasswordField = false,
+  VoidCallback? toggleVisibility,
+}) {
+  return TextFormField(
+    keyboardType: keyboard == true ? TextInputType.number : TextInputType.text, // Set input type based on `keyboard` value
+    decoration: InputDecoration(
+      labelText: label,
+      hintText: hint,
+      labelStyle: TextStyle(
+        color: showFieldError && isFieldEmpty ? Colors.red : null,
       ),
-      onChanged: onChanged,
-      obscureText: obscureText,
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'This field cannot be empty';
-        }
-        return null;
-      },
-    );
-  }
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(
+          color: showFieldError && isFieldEmpty ? Colors.red : Colors.grey,
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(
+          color: showFieldError && isFieldEmpty ? Colors.red : Colors.blue,
+        ),
+      ),
+      suffixIcon: isPasswordField
+          ? IconButton(
+              icon: Icon(
+                obscureText ? Icons.visibility : Icons.visibility_off,
+              ),
+              onPressed: toggleVisibility,
+            )
+          : null, // Show the eye icon only for password fields
+    ),
+    onChanged: onChanged,
+    obscureText: obscureText,
+    validator: (value) {
+      if (value == null || value.isEmpty) {
+        return 'This field cannot be empty';
+      }
+      return null;
+    },
+  );
+}
 
-  void _handleSubmit() {
+  void _handleSubmit() async {
     if (_formKey.currentState!.validate()) {
       if (accountNumber != reenteredAccountNumber) {
         setState(() {
@@ -196,13 +204,23 @@ class _BankFormPageState extends State<BankFormPage> {
         // Here you can process your data, e.g., save it to a list or database
         print(
             'Bank details submitted: $bankName, $bankingName, $accountNumber, $ifsc');
-        var bank = BankDetails(
-            bank: bankName!,
-            bankingName: bankingName!,
-            acno: accountNumber!,
-            ifsc: ifsc!);
-        print(bank.acno);
+        var bank = {
+            "bank": bankName!,
+            "bankingname": bankingName!,
+            "acno": accountNumber!,
+            "ifsc": ifsc!,};
+        print(bank);
         Navigator.pop(context);
+        try {
+          await apiService.submitBankDetails(bank);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Form Submitted Successfully!')),
+          );
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error submitting details: $e')),
+          );
+        }
       }
     } else {
       setState(() {
