@@ -41,7 +41,7 @@ android {
     }
 
    defaultConfig {
-    applicationId "com.example.telemoni"
+    applicationId "in.telemoni.telemoni"
     minSdkVersion 21 // or your desired minimum
     targetSdkVersion 33 // Ensure this is 31 or higher for media permissions
     versionCode flutterVersionCode.toInteger()

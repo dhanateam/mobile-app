@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.telemoni">
+    package="in.telemoni.telemoni">
     
     <!-- Permissions for camera and storage access -->
     <uses-permission android:name="android.permission.CAMERA" />
