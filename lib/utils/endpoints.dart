@@ -5,4 +5,9 @@ class Endpoints {
   static const String verifyOtp = '$baseUrl/api/auth/user/verifyotp';
   static const String addProviderBank = '$baseUrl/api/provider/add/bank';
   static const String createProduct = '$baseUrl/api/provider/add/product';
+  static const String getBankAccounts = '$baseUrl/api/provider//get/bankaccounts';
+  static const String getProducts = '$baseUrl/api/provider//get/products';
+  static const String deleteBankAccount = '$baseUrl/api/provider/delete/bankaccount';
+  static const String raiseWithdrawal = '$baseUrl/api/provider/raise/withdrawl';
+  static const String withdrawalHistory = '$baseUrl/api/provider/wallet/transactions';
 }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "930176175470",
+    "project_id": "telemoniwp",
+    "storage_bucket": "telemoniwp.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:930176175470:android:0a4d4d549d70d5cd95857f",
+        "android_client_info": {
+          "package_name": "in.telemoni.telemoni"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC601ZXpaB75f_oYkYb3GsTC1jFabyBDgE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

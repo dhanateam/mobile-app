@@ -9,7 +9,7 @@ class Product {
   final bool? channel;
   final String name;
   final String? link;
-  final double price;
+  final int price;
   Product(
       {required this.productId,
       required this.about,
@@ -56,3 +56,19 @@ class Product {
 List<Product> parseProductsList(List<dynamic> jsonList) {
   return jsonList.map((json) => Product.fromJson(json)).toList();
 }
+
+
+class ResponseModel {
+  final bool success;
+  final String message;
+
+  ResponseModel({required this.success, required this.message});
+
+  factory ResponseModel.fromJson(Map<String, dynamic> json) {
+    return ResponseModel(
+      success: json['success'] ?? false,
+      message: json['message'] ?? '',
+    );
+  }
+}
+

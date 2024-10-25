@@ -12,4 +12,14 @@ class Transaction {
     required this.bankName,
     required this.transactionId,
   });
+
+  factory Transaction.fromJson(Map<String, dynamic> json) {
+    return Transaction(
+      status: json['status'],
+      amount: json['amount'],
+      date: json['date'],
+      bankName: json['bankName'],
+      transactionId: json['transactionId'],
+    );
+  }
 }

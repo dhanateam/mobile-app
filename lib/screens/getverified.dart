@@ -92,38 +92,38 @@ Future<void> _pickImage() async {
 
 
 void _validateAndSubmit() async {
-  String enteredPan = _panController.text.toUpperCase();
-  bool isPanValid = _panFormat.hasMatch(enteredPan);
+    String enteredPan = _panController.text.toUpperCase();
+    bool isPanValid = _panFormat.hasMatch(enteredPan);
 
-  setState(() {
-    _isPanValid = isPanValid;
-  });
+    setState(() {
+      _isPanValid = isPanValid;
+    });
 
-  if (isPanValid && _selectedImage != null && _base64Image != null) {
-    final panData = {
-      'name': _nameController.text,
-      'pan': enteredPan,
-      'image': _base64Image, // Use the Base64 image string
-    };
+    if (isPanValid && _base64Image != null) {
+      final panData = {
+        'name': _nameController.text,
+        'pan': enteredPan,
+        'image': _base64Image, // Use the Base64 image string
+      };
 
-    print('Name: ${_nameController.text}, PAN: ${_panController.text}, Image (Base64): ${_base64Image}');
+      print('Name: ${_nameController.text}, PAN: ${_panController.text}, Image (Base64): ${_base64Image}');
 
-    try {
-      await apiService.submitPanDetails(panData);
+      try {
+        await apiService.submitPanDetails(panData); // Use the ApiService to submit details
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Form Submitted Successfully!')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error submitting details: $e')),
+        );
+      }
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Form Submitted Successfully!')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error submitting details: $e')),
+        SnackBar(content: Text('Please enter a valid PAN and upload an image.')),
       );
     }
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Please enter a valid PAN and upload an image.')),
-    );
   }
-}
 
 
   int _previousLength = 0; // Track the previous input length

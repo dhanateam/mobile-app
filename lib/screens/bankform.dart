@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telemoni/models/bank.dart';
+import 'package:telemoni/screens/banking.dart';
 import 'package:telemoni/utils/api_service.dart';
 import 'package:telemoni/utils/themeprovider.dart';
 
@@ -210,15 +211,17 @@ Widget _buildTextField(
             "acno": accountNumber!,
             "ifsc": ifsc!,};
         print(bank);
-        Navigator.pop(context);
         try {
           await apiService.submitBankDetails(bank);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Form Submitted Successfully!')),
-          );
+          );Navigator.pop(context);
+          Navigator.push(context,MaterialPageRoute(
+                          builder: (context) => Banking(),
+                        ),);
         } catch (e) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error submitting details: $e')),
+            SnackBar(content: Text( '$e')),
           );
         }
       }

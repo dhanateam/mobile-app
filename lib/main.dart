@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -65,6 +66,7 @@ class _LoginPageState extends State<LoginPage> {
   bool otpVisible = false;
   final ApiService apiService = ApiService();
   final SecureStorageService secureStorageService = SecureStorageService();
+  var verify = '';
 
   // Function to generate a random OTP
   String _generateRandomOTP() {
@@ -78,7 +80,21 @@ class _LoginPageState extends State<LoginPage> {
     if (phoneNumber.isNotEmpty) {
       try {
         // Call the API and get the generated OTP
-        generatedOTP = await apiService.generateOTP(phoneNumber);
+        //generatedOTP = await apiService.generateOTP(phoneNumber);
+        FirebaseAuth.instance.verifyPhoneNumber(
+            verificationCompleted: (PhoneAuthCredential) {
+              print(PhoneAuthCredential);
+            },
+            verificationFailed: (Error) {
+              print(Error);
+            },
+            codeSent: (verificationId, forceResendingToken) {
+              verify = verificationId;
+            },
+            codeAutoRetrievalTimeout: (verificationId) {
+              print('autoretrievaltimeout');
+            },
+            phoneNumber: phoneNumber);
 
         setState(() {
           otpVisible = true; // Show OTP input field
@@ -107,23 +123,27 @@ class _LoginPageState extends State<LoginPage> {
 
     if (enteredOTP.isNotEmpty && phoneNumber.isNotEmpty) {
       try {
+
+        final cred = PhoneAuthProvider.credential(verificationId: verify,smsCode: enteredOTP);
+        await FirebaseAuth.instance.signInWithCredential(cred);
+        Navigator.pushReplacementNamed(context, '/home');
         // Call the API to verify the OTP
-        String? token = await apiService.verifyOTP(phoneNumber, enteredOTP);
+        // String? token = await apiService.verifyOTP(phoneNumber, enteredOTP);
 
-        if (token != null) {
-          // If the token is returned, store it in secure storage
-          await secureStorageService.storeToken(token);
-          LocalStorage.setLogin('y');
-          print(token);
+        // if (token != null) {
+        //   // If the token is returned, store it in secure storage
+        //   await secureStorageService.storeToken(token);
+        //   LocalStorage.setLogin('y');
+        //   print(token);
 
-          // Navigate to the home page only if the token is successfully stored
-          Navigator.pushReplacementNamed(context, '/home');
-        } else {
-          // If the token is not returned, show an error
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to verify OTP')),
-          );
-        }
+        //   // Navigate to the home page only if the token is successfully stored
+        //   Navigator.pushReplacementNamed(context, '/home');
+        // } else {
+        //   // If the token is not returned, show an error
+        //   ScaffoldMessenger.of(context).showSnackBar(
+        //     const SnackBar(content: Text('Failed to verify OTP')),
+        //   );
+        // }
       } catch (e) {
         // Handle API error
         ScaffoldMessenger.of(context).showSnackBar(
@@ -149,8 +169,10 @@ class _LoginPageState extends State<LoginPage> {
             TextField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
-              decoration:
-                  const InputDecoration(labelText: 'Enter phone number'),
+              decoration: const InputDecoration(
+                labelText: 'Enter phone number',
+                prefixText: '+91 ',
+              ),
             ),
             const SizedBox(height: 20),
             ElevatedButton(

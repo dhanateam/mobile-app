@@ -11,58 +11,72 @@ class AboutProductWidget extends StatelessWidget {
   const AboutProductWidget({super.key, required this.product});
 
   @override
-  Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final customColors = themeProvider.customColors;
+Widget build(BuildContext context) {
+  final themeProvider = Provider.of<ThemeProvider>(context);
+  final customColors = themeProvider.customColors;
 
-    return DefaultTabController(
-      length: 2, // Number of tabs
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            product.name,
-            style: TextStyle(color: customColors.textColor),
+  return DefaultTabController(
+    length: 2, // Number of tabs
+    child: Scaffold(
+      appBar: AppBar(
+        title: Text(
+          product.name,
+          style: TextStyle(color: customColors.textColor),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.edit, color: customColors.textColor),
+            onPressed: () {
+              // Add your edit functionality here
+            },
           ),
-          actions: [
-            IconButton(
-              icon: Icon(Icons.edit, color: customColors.textColor),
-              onPressed: () {
-                // Add your edit functionality here
-              },
-            ),
-          ],
-          backgroundColor: Theme.of(context)
-              .colorScheme
-              .inversePrimary, // Using the seed color from ThemeData
-        ),
-        body: Column(
-          children: [
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _buildAboutSection(context),
-                  _buildDashboardSection(
-                      context), // Implement your dashboard section similarly
-                ],
-              ),
-            ),
-            Material(
-              color: Theme.of(context).colorScheme.inversePrimary,
-              child: TabBar(
-                labelColor: customColors.textColor,
-                unselectedLabelColor: customColors.textColor.withOpacity(0.6),
-                tabs: const [
-                  Tab(text: "About"),
-                  Tab(text: "Dashboard"),
-                ],
-              ),
-            ),
-          ],
-        ),
+        ],
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary, // Using the seed color from ThemeData
       ),
-    );
-  }
+      body: Column(
+        children: [
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildAboutSection(context),
+                // Conditional rendering for the dashboard based on product status
+                if (product.status == 'active')
+                  _buildDashboardSection(context)
+                else if (product.status == 'inactive')
+                  _buildInactiveSection(context,)
+                else
+                  Center(child: Text('Dashboard not available')),
+              ],
+            ),
+          ),
+          Material(
+            color: Theme.of(context).colorScheme.inversePrimary,
+            child: TabBar(
+              labelColor: customColors.textColor,
+              unselectedLabelColor: customColors.textColor.withOpacity(0.6),
+              tabs: const [
+                Tab(text: "About"),
+                Tab(text: "Dashboard"),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
+Widget _buildInactiveSection(BuildContext context) {
+  return Center(
+    child: Text(
+      'This product is no longer available.',
+      style: TextStyle(
+        //color: customColors.textColor,
+        fontSize: MediaQuery.of(context).size.width * 0.05,
+      ),
+    ),
+  );
+}
   Widget _buildAboutSection(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final customColors = themeProvider.customColors;
@@ -166,7 +180,7 @@ class AboutProductWidget extends StatelessWidget {
               Divider(color: customColors.textColor), // Separator line
 
               // Price Section
-              _buildPriceRow(context, product.price, customColors),
+              _buildPriceRow(context, product.price , customColors),
               Divider(color: customColors.textColor),
             ],
           ),
@@ -266,7 +280,7 @@ class AboutProductWidget extends StatelessWidget {
   }
 
   Widget _buildPriceRow(
-      BuildContext context, double price, CustomColorScheme customColors) {
+      BuildContext context, int price, CustomColorScheme customColors) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(

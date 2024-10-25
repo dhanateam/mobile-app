@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:telemoni/screens/products.dart';
 import 'package:telemoni/utils/api_client.dart';
 import 'package:telemoni/utils/api_service.dart';
 import 'package:telemoni/utils/themeprovider.dart';
@@ -29,13 +30,14 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
     final customColors = Provider.of<ThemeProvider>(context).customColors;
 
     return Scaffold(
-     appBar: AppBar(
-  title: Text(
-    widget.type == 'Channel' ? 'Telegram Channel' : 'Telegram Group',
-    style: TextStyle(
-      color: customColors.textColor, // Set the text color using customColors
-    ),
-  ),
+      appBar: AppBar(
+        title: Text(
+          widget.type == 'Channel' ? 'Telegram Channel' : 'Telegram Group',
+          style: TextStyle(
+            color:
+                customColors.textColor, // Set the text color using customColors
+          ),
+        ),
         backgroundColor: Theme.of(context)
             .colorScheme
             .inversePrimary, // Set background using seed color
@@ -226,80 +228,89 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
       ),
     );
   }
-Future<void> _getPhoto() async {
-  try {
-    // Open the gallery to pick an image
-    final pickedFile =
-        await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      final file = File(pickedFile.path);
-      final fileSize = await file.length(); // Get file size in bytes
 
-      // Check if the file size is less than or equal to 1 MB (1 * 1024 * 1024 bytes)
-      if (fileSize <= 1 * 1024 * 1024) {
-        final bytes = await file.readAsBytes(); // Read file bytes
-        setState(() {
-          _base64Image = base64Encode(bytes); // Convert image to base64
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Photo selected successfully!')),
-        );
+  Future<void> _getPhoto() async {
+    try {
+      // Open the gallery to pick an image
+      final pickedFile =
+          await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        final file = File(pickedFile.path);
+        final fileSize = await file.length(); // Get file size in bytes
+
+        // Check if the file size is less than or equal to 1 MB (1 * 1024 * 1024 bytes)
+        if (fileSize <= 1 * 1024 * 1024) {
+          final bytes = await file.readAsBytes(); // Read file bytes
+          setState(() {
+            _base64Image = base64Encode(bytes); // Convert image to base64
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Photo selected successfully!')),
+          );
+        } else {
+          // Show an error message if the image size is greater than 1 MB
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'The image size must be 1 MB or less. Please select a smaller image.'),
+            ),
+          );
+        }
       } else {
-        // Show an error message if the image size is greater than 1 MB
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('The image size must be 1 MB or less. Please select a smaller image.'),
-          ),
+          const SnackBar(content: Text('No image was selected.')),
         );
       }
-    } else {
+    } catch (e) {
+      // Handle any errors that may occur
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No image was selected.')),
+        const SnackBar(
+            content: Text('An error occurred while picking the image.')),
       );
     }
-  } catch (e) {
-    // Handle any errors that may occur
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('An error occurred while picking the image.')),
-    );
   }
-}
-
 
   void _createRequest() async {
-  // Check for mandatory fields
-  if (_ppu.isEmpty ||
-      _nameController.text.isEmpty ||
-      _descriptionController.text.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('All fields except the image are mandatory.')),
-    );
-    return;
+    // Check for mandatory fields
+    if (_ppu.isEmpty ||
+        _nameController.text.isEmpty ||
+        _descriptionController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('All fields except the image are mandatory.')),
+      );
+      return;
+    }
+
+    // Construct the product creation request
+    final request = {
+      'ppu': _ppu,
+      'channelName': _nameController.text,
+      'displayText': _descriptionController.text,
+      'image': _base64Image, // Ensure _base64Image contains the image in base64
+      'type': 'telegram',
+      'ctype': widget.type == 'Channel',
+      'validity': _validity.toLowerCase(),
+    };
+
+    try {
+      // Call the API to create the product
+      await apiService.createProduct(request);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Product created successfully!')),
+      );
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const ProductsPage(),
+        ),
+      );
+    } catch (e) {
+      // Handle any errors
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error creating product: $e')),
+      );
+    }
   }
-
-  // Construct the product creation request
-  final request = {
-    'ppu': _ppu,
-    'channelName': _nameController.text,
-    'displayText': _descriptionController.text,
-    'image': _base64Image, // Ensure _base64Image contains the image in base64
-    'type': 'telegram',
-    'ctype': widget.type == 'Channel',
-    'validity': _validity.toLowerCase(),
-  };
-
-  try {
-    // Call the API to create the product
-    await apiService.createProduct(request);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Product created successfully!')),
-    );
-  } catch (e) {
-    // Handle any errors
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error creating product: $e')),
-    );
-  }
-}
-
 }
